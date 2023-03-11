@@ -741,6 +741,11 @@ setup_method_manual() {
   echo "with partiton type 83 (Linux)."
   echo -e "\n\n"
 
+  if [ -d /sys/firmware/efi ]; then
+    echo "For UEFI boot, make sure to also create a 256MB partition with partition type ef."
+    echo -e "\n\n"
+  fi
+
   # if this is parted, let the user create the partitions
   if [ "$parted" == 'parted' ]; then
     while [ -z "$INSTALL_DRIVE" ]; do
@@ -792,7 +797,16 @@ setup_method_manual() {
     if [ ${ROOT_PARTITION:0:2} = "md" ]; then
         INSTALL_DRIVE=$ROOT_PARTITION
     else
-        INSTALL_DRIVE=$(echo $ROOT_PARTITION | sed 's/[0-9]//g')
+        INSTALL_DRIVE=$(echo $ROOT_PARTITION | sed 's/p?[0-9]$//g')
+    fi
+  fi
+
+  if [ -d /sys/firmware/efi ]; then
+    efipart=$(lsblk --raw --output NAME,PARTTYPENAME /dev/$INSTALL_DRIVE | grep 'EFI\\x20System' | awk '{print $1;}')
+
+    if [ -n "$efipart" ]; then
+      echo "Found EFI partition: $efipart"
+      echo $efipart >> /tmp/efiparts.tmp
     fi
   fi
 }
